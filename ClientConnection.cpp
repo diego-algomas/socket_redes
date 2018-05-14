@@ -78,60 +78,25 @@ ClientConnection::~ClientConnection() {
 }
 
 // Nos dan directamente la direccion no hace falta la consulta dns.
+// Pero quién nos la da y de qué manera, no es más facil poner un string???
 
 int connect_TCP( uint32_t address,  uint16_t  port) {
 
     struct sockaddr_in sin;
-    struct hostent* hent; // ¿Qué es hostent?
-
-
-
-
-    /*       struct hostent {
-
-                char  *h_name;            /* official name of host */
-    //          char **h_aliases;         /* alias list */
-    //          int    h_addrtype;        /* host address type */
-    //          int    h_length;          /* length of address */
-    //          char **h_addr_list;       /* list of addresses */
-    //          h_addr The first address in h_addr_list for backward compatibility.
-  //}
-
-          /*  struct sockaddr_in {
-
-              short            sin_family;   // e.g. AF_INET
-              unsigned short   sin_port;     // e.g. htons(3490)
-              struct in_addr   sin_addr;     // see struct in_addr, below
-              char             sin_zero[8];  // zero this if you want to
-
-          };*/
-
-
-
-
-      /*    struct in_addr {
-          in_addr_t s_addr;               /* the IP address in network byte order    */
-        //};
-
-
+    struct hostent* hent;
 
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_port = htons(port);
+    sin.sin_addr.s_addr = (unsigned long)address;
 
-    if (hent = gethostbyname(host)){
-      memcpy(&sin.sin_addr, hent -> h_addr, hent -> h_length);
-    }else if ((sin.sin_addr.s_addr = inet_addr((char*)host)) == INADDR_NONE){
-      errexit("I cannot resolve the name \"%s\"\n", host);
-    }
-
-    socketFd = socket(AF_INET, SOCK_STEAM, 0);
+    int socketFd = socket(AF_INET, SOCK_STREAM, 0);
     if (socketFd < 0){
       errexit("Socket cannot be created: %s\n", strerror(errno));
     }
 
     if (connect(socketFd, (struct sockaddr*)&sin, sizeof(sin)) < 0){
-      errexit("We cannot connect with %s: %s\n", host, strerrno(errno));
+      errexit("We cannot connect %s\n");
     }
 
     return socketFd;
@@ -166,6 +131,7 @@ void ClientConnection::stop() {
 
 void ClientConnection::WaitForRequests() {
     if (!ok) { // Si ha habido errores de inicialización
+      std::cout << "Error de inicialización\n";
 	     return;
     }
 
@@ -178,16 +144,42 @@ void ClientConnection::WaitForRequests() {
       fscanf(fd, "%s", command);
       if (COMMAND("USER")) {
 	    fscanf(fd, "%s", arg);
+      if (strcmp(arg, "Adri") == 0  ){
 	    fprintf(fd, "331 User name ok, need password\n");
+      }else{
+      fprintf(fd, "530 Not logged in\n");
+      parar = true;
+        }
       }
       else if (COMMAND("PWD")) {
+        /*PWD
+                  257
+                  500, 501, 502, 421, 550*/
+
 
       }
       else if (COMMAND("PASS")) {
-
+        /*230
+                 202
+                 530
+                 500, 501, 503, 421
+                 332*/
+      fscanf(fd, "%s", arg);
+      if (strcmp(arg, "1234") == 0  ){
+	    fprintf(fd, "230 User logged in\n");
+      }else{
+      fprintf(fd, "530 Not logged in\n");
+      parar = true;
+        }
       }
       else if (COMMAND("PORT")) {
-
+        /*PORT
+                  200
+                  500, 501, 421, 530*/
+      fprintf(fd, "200 Port ok\n");
+      // Aquí tenemos que conectarnos, es decir connectar el data socket.
+      
+      /* Este port no es el mismo que el del FTP aqui tiene que recibirse una info*/
       }
       else if (COMMAND("PASV")) {
 
@@ -199,13 +191,76 @@ void ClientConnection::WaitForRequests() {
 
       }
       else if (COMMAND("SYST")) {
-
+      fprintf(fd, "215 UNIX Type: L8.\n");
       }
       else if (COMMAND("TYPE")) {
-
+      fprintf(fd, "200 Port ok\n");
       }
       else if (COMMAND("RETR")) {
 
+      fscanf(fd, "%s", arg);
+
+      FILE* fichero;
+      fichero = fopen(arg,"rb");
+
+      if (fichero == NULL){
+        std::cout << "ERROR!!!!!!!!!!!\n";
+        exit -1;
+    }
+      fprintf(fd, "450 Requested file action not taken. File unavailable (e.g., file busy, non-existent)\n");
+
+      /* Tenemos que utilizar fread para leer el fichero en un buffer y poder ir mandandolo por medio de send()
+      progresivamente*/
+
+      /* size_t fread ( void * ptr, size_t size, size_t count, FILE * stream );
+      --> Reads an array of count elements,  each one with a size of size bytes,
+      from the stream and stores them in the block of memory specified by ptr.*/
+
+      fprintf(fd, "150 File status okay; about to open data connection\n");
+
+      // Obtenemos la longitud del fichero.
+
+      std::cout << "1\n";
+      fseek(fichero, 0, SEEK_END);
+      std::cout << "2\n";
+      long ficheroSize = ftell(fichero);
+      std::cout << "3\n";
+      rewind(fichero);
+
+      // Ahora reservamos memoria para ese buffer
+      std::cout << "2\n";
+      char* buffer;
+      buffer = (char*) malloc(sizeof(char)*ficheroSize);
+      if (buffer == NULL){
+        std::cout << "Memory error\n";
+      }
+
+      std::cout << "3\n";
+      // Guardamos el fichero en el buffer
+      size_t result = fread(buffer, 1, ficheroSize, fichero);
+      if (result != ficheroSize)
+      std::cout << "Error de lectura\n";
+
+
+      //TODO send devuelve -1 asi que hay un error.
+
+      // Enviamos el fichero
+      char* ptr = buffer;
+      while (result > 0){
+        // "On success, these calls return the number of characters sent." --> send()
+        // ¿Habrá un problema con el data socket?
+        int charactersSent = send(data_socket, ptr, result , 0);
+        std::cout << charactersSent << "\n";
+        break;
+        ptr += charactersSent;
+        result  -= charactersSent;
+        std::cout << charactersSent << "\n";
+      }
+
+      fprintf(fd, "226 Closing data connection.\n");
+
+      /* Abrir el fichero con fopen y mandarlo con send() a la dirección IP que nos tienen que dar supongo.
+        ¿Y luego usar connect_tcp?*/
       }
       else if (COMMAND("QUIT")) {
 

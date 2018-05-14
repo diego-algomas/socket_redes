@@ -19,7 +19,7 @@
 #include <arpa/inet.h>
 
  #include <unistd.h>
-
+#include <iostream>
 
 #include <pthread.h>
 
@@ -85,39 +85,20 @@ void FTPServer::stop() {
 // Starting of the server
 void FTPServer::run() {
 
-    struct sockaddr_in fsin; // Qué es fsin?
+    struct sockaddr_in fsin;
+
+
+
     int ssock;
     socklen_t alen = sizeof(fsin);
 
-    /*       struct hostent {
-
-                char  *h_name;            /* official name of host */
-    //          char **h_aliases;         /* alias list */
-    //          int    h_addrtype;        /* host address type */
-    //          int    h_length;          /* length of address */
-    //          char **h_addr_list;       /* list of addresses */
-    //          h_addr The first address in h_addr_list for backward compatibility.
-  //}
-
-          /*  struct sockaddr_in {
-
-              short            sin_family;   // e.g. AF_INET
-              unsigned short   sin_port;     // e.g. htons(3490)
-              struct in_addr   sin_addr;     // see struct in_addr, below
-              char             sin_zero[8];  // zero this if you want to
-
-          };*/
-
-
-
-
-      /*    struct in_addr {
-          in_addr_t s_addr;               /* the IP address in network byte order    */
-        //};
     msock = define_socket_TCP(port);  // This function must be implemented by you.
+
     while (1) {
 	pthread_t thread;
-        ssock = accept(msock, (struct sockaddr *)&fsin, &alen);
+  // Después de esto se está bloqueando el servidor.
+  // Lo que devuelve accept es el socket del cliente.
+        ssock = accept(msock, (struct sockaddr *)&fsin, &alen); // ¿Cómo se acepta una conexión sin conexion?
         if(ssock < 0)
             errexit("Fallo en el accept: %s\n", strerror(errno));
 
@@ -129,6 +110,13 @@ void FTPServer::run() {
   // Run client connection es una función de este mismo .cpp
   // Espera a que termine el hilo?
 	pthread_create(&thread, NULL, run_client_connection, (void*)connection);
+
+  /*void* run_client_connection(void *c) {
+      ClientConnection *connection = (ClientConnection *)c;
+      connection->WaitForRequests();
+
+      return NULL;
+  }*/
 
     }
 
