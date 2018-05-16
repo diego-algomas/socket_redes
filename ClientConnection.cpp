@@ -68,7 +68,7 @@ ClientConnection::ClientConnection(int s) {
   }
 
 
-};
+}//;
 
 
 ClientConnection::~ClientConnection() {
@@ -104,10 +104,6 @@ int connect_TCP( uint32_t address,  int  port) {
     return socketFd;
 
 }
-
-
-
-
 
 
 void ClientConnection::stop() {
@@ -176,29 +172,85 @@ void ClientConnection::WaitForRequests() {
       }
       else if (COMMAND("PORT")) {
 
-      std::cout << "IM INTO PORT\n";
-        /*PORT
-                  200
-                  500, 501, 421, 530*/
+              std::cout << "IM INTO PORT\n";
+                /*PORT
+                          200
+                          500, 501, 421, 530*/
 
-      int ip1, ip2, ip3, ip4, ip5, ip6;
+              int ip1, ip2, ip3, ip4, ip5, ip6;
 
-      fscanf(fd,"%i,%i,%i,%i,%i,%i", &ip1,&ip2,&ip3,&ip4,&ip5,&ip6);
-      std::cout << "IPS ARE -->" << ip1 << ip2 << ip3 << ip4 << ip5<< ip6 << "\n";
-      std::cout << ip6 << "\n";
+              fscanf(fd,"%i,%i,%i,%i,%i,%i", &ip1,&ip2,&ip3,&ip4,&ip5,&ip6);
+              std::cout << "IPS ARE -->" << ip1 << ip2 << ip3 << ip4 << ip5<< ip6 << "\n";
+              std::cout << ip6 << "\n";
 
-      uint32_t ip = ip4 << 24 | ip3 << 16 | ip2 << 8 | ip1;
-      uint32_t port = ip6 << 8 | ip5;
-      std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
+              uint32_t ip = ip4 << 24 | ip3 << 16 | ip2 << 8 | ip1;
+              uint32_t port = ip6 << 8 | ip5;
+              std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
 
-      data_socket = connect_TCP (ip, port);
-
-      fprintf(fd, "200 Port ok\n");
+              data_socket = connect_TCP (ip, port);
+              if(data_socket>=0){
+                fprintf(fd, "200 Port ok\n");
+      }
+      else {
+        fprintf(fd, "421 fail\n.");
+      }
       // Aquí tenemos que conectarnos, es decir connectar el data socket.
 
       /* Este port no es el mismo que el del FTP aqui tiene que recibirse una info*/
     }
       else if (COMMAND("PASV")) {
+
+           struct sockaddr_in sin;
+           int socketFd = socket(AF_INET, SOCK_STREAM, 0);
+
+           if (socketFd < 0){
+             errexit("We cannot create the socket: %s\n",strerror(errno));
+           }
+
+           /*Sets the first num bytes of the block of memory pointed
+           by ptr to the specified value */
+           memset(&sin, 0, sizeof(sin));
+           sin.sin_family = AF_INET;
+           sin.sin_addr.s_addr = inet_addr("127.0.0.1");
+           sin.sin_port = 50000;
+
+
+           if (bind(socketFd, (struct sockaddr*)&sin , sizeof(sin)) < 0 ){
+             errexit("We couldn't bind with the port: %s\n", strerror(errno));
+           }
+
+
+           //listen for connections on a socket
+           if (listen(socketFd, 5) < 0 )
+             errexit("Fail during listening: %s\n", strerror(errno) );
+
+
+           std::cout<<sin.sin_addr.s_addr<<std::endl;
+           fprintf(fd, "227 Entering Passive Mode (%d,%d,%d,%d,%d,%d).\n",(unsigned int)(sin.sin_addr.s_addr & 0xff),(unsigned int)((sin.sin_addr.s_addr >> 8) & 0xff),
+                                                                          (unsigned int)((sin.sin_addr.s_addr >> 16) & 0xff),
+                                                                          (unsigned int)((sin.sin_addr.s_addr >> 24) & 0xff),
+                                                                          (unsigned int)(sin.sin_port & 0xff),
+                                                                          (unsigned int)(sin.sin_port >> 8));
+//            printf("227 Entering Passive Mode (%d,%d,%d,%d,%d,%d).\n",(unsigned int)(sin.sin_addr.s_addr & 0xff),(unsigned int)((sin.sin_addr.s_addr >> 8) & 0xff),
+//                   (unsigned int)((sin.sin_addr.s_addr >> 16) & 0xff),
+//                   (unsigned int)((sin.sin_addr.s_addr >> 24) & 0xff),
+//                   (unsigned int)(sin.sin_port & 0xff),
+//                   (unsigned int)(sin.sin_port >> 8));
+
+
+//           struct sockaddr_in fsin;
+//            socklen_t alen = sizeof(fsin);
+//            int ssock;
+//            std::cout<<"Salio"<<std::endl;
+//            ssock =accept(socketFd, (struct sockaddr *)&fsin, &alen);
+//            std::cout<<ssock<<std::endl;
+//           if(ssock<0)
+//                errexit("Fallo en el accept: %s\n", strerror(errno));
+
+
+
+            std::cout<<"llego"<<std::endl;
+           // data_socket=socketFd;
 
       }
       else if (COMMAND("CWD")) {
