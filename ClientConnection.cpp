@@ -80,7 +80,9 @@ ClientConnection::~ClientConnection() {
 // Nos dan directamente la direccion no hace falta la consulta dns.
 // Pero quién nos la da y de qué manera, no es más facil poner un string???
 
-int connect_TCP( uint32_t address,  uint16_t  port) {
+int connect_TCP( uint32_t address,  int  port) {
+
+    std::cout << "ADDRESS RECEIVED" << int(address) << "PORT RECEIVED" << int(port) << "\n";
 
     struct sockaddr_in sin;
     struct hostent* hent;
@@ -173,14 +175,30 @@ void ClientConnection::WaitForRequests() {
         }
       }
       else if (COMMAND("PORT")) {
+
+      std::cout << "IM INTO PORT\n";
         /*PORT
                   200
                   500, 501, 421, 530*/
+
+      int ip1, ip2, ip3, ip4, ip5, ip6;
+
+      fscanf(fd,"%i,%i,%i,%i,%i,%i", &ip1,&ip2,&ip3,&ip4,&ip5,&ip6);
+      std::cout << "IPS ARE -->" << ip1 << ip2 << ip3 << ip4 << ip5<< ip6 << "\n";
+      std::cout << ip6 << "\n";
+
+      int ip = 1000 * ip1 + 100 * ip2 + 10 * ip3 + ip4;
+      int port = 1000 * ip5 + ip6;
+
+      std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
+
+      data_socket = connect_TCP (uint32_t(ip), port);
+
       fprintf(fd, "200 Port ok\n");
       // Aquí tenemos que conectarnos, es decir connectar el data socket.
-      
+
       /* Este port no es el mismo que el del FTP aqui tiene que recibirse una info*/
-      }
+    }
       else if (COMMAND("PASV")) {
 
       }
@@ -204,9 +222,9 @@ void ClientConnection::WaitForRequests() {
       fichero = fopen(arg,"rb");
 
       if (fichero == NULL){
+      //  std::cout << arg << "\n";
         std::cout << "ERROR!!!!!!!!!!!\n";
-        exit -1;
-    }
+      }
       fprintf(fd, "450 Requested file action not taken. File unavailable (e.g., file busy, non-existent)\n");
 
       /* Tenemos que utilizar fread para leer el fichero en un buffer y poder ir mandandolo por medio de send()
