@@ -24,9 +24,9 @@ int main(int argc, char **argv) {
     struct sigaction action;
     action.sa_sigaction = sighandler;
     action.sa_flags = SA_SIGINFO;
-      sigaction(SIGINT, &action , NULL);
+        sigaction(SIGINT, &action , NULL);
     server = new FTPServer(2121);
-      atexit(exit_handler); /* It only specifies how to stop the server*/
+        atexit(exit_handler); /* It only specifies how to stop the server*/
     server->run(); /* Then the servers inits*/
 
 }

@@ -89,7 +89,7 @@ int connect_TCP( uint32_t address,  int  port) {
 
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
-    sin.sin_port = htons(port);
+    sin.sin_port = port;
     sin.sin_addr.s_addr = (unsigned long)address;
 
     int socketFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -191,7 +191,7 @@ void ClientConnection::WaitForRequests() {
       uint32_t port = ip6 << 8 | ip5;
       std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
 
-      data_socket = connect_TCP (uint32_t(ip), port);
+      data_socket = connect_TCP (ip, port);
 
       fprintf(fd, "200 Port ok\n");
       // Aquí tenemos que conectarnos, es decir connectar el data socket.
