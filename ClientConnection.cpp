@@ -187,9 +187,8 @@ void ClientConnection::WaitForRequests() {
       std::cout << "IPS ARE -->" << ip1 << ip2 << ip3 << ip4 << ip5<< ip6 << "\n";
       std::cout << ip6 << "\n";
 
-      int ip = 1000 * ip1 + 100 * ip2 + 10 * ip3 + ip4;
-      int port = 1000 * ip5 + ip6;
-
+      uint32_t ip = ip4 << 24 | ip3 << 16 | ip2 << 8 | ip1;
+      uint32_t port = ip6 << 8 | ip5;
       std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
 
       data_socket = connect_TCP (uint32_t(ip), port);
