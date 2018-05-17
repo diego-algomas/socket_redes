@@ -80,16 +80,16 @@ ClientConnection::~ClientConnection() {
 // Nos dan directamente la direccion no hace falta la consulta dns.
 // Pero quién nos la da y de qué manera, no es más facil poner un string???
 
-int connect_TCP( uint32_t address,  int  port) {
+int connect_TCP( uint32_t address,  uint16_t  port) {
 
-    std::cout << "ADDRESS RECEIVED" << int(address) << "PORT RECEIVED" << int(port) << "\n";
+    std::cout << "ADDRESS RECEIVED " << address << "PORT RECEIVED " << port << "\n";
 
     struct sockaddr_in sin;
     struct hostent* hent;
 
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
-    sin.sin_port = port;
+    sin.sin_port = htons(port);
     sin.sin_addr.s_addr = (unsigned long)address;
 
     int socketFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -100,6 +100,12 @@ int connect_TCP( uint32_t address,  int  port) {
     if (connect(socketFd, (struct sockaddr*)&sin, sizeof(sin)) < 0){
       errexit("We cannot connect %s\n");
     }
+    struct sockaddr_in sa;
+    socklen_t sa_len = sizeof(sa);
+
+    getsockname(socketFd,(struct sockaddr *)&sa, &sa_len);
+
+    std::cout<<"ip es "<<sa.sin_addr.s_addr<<"puerto"<<sa.sin_port<<std::endl;
 
     return socketFd;
 
@@ -181,15 +187,16 @@ void ClientConnection::WaitForRequests() {
                           200
                           500, 501, 421, 530*/
 
-              int ip1, ip2, ip3, ip4, ip5, ip6;
+              unsigned int ip1[4];
+              unsigned int port1[2];
 
-              fscanf(fd,"%i,%i,%i,%i,%i,%i", &ip1,&ip2,&ip3,&ip4,&ip5,&ip6);
-//              std::cout << "IPS ARE -->" << ip1 << ip2 << ip3 << ip4 << ip5<< ip6 << "\n";
+              fscanf(fd,"%d,%d,%d,%d,%d,%d", &ip1[0],&ip1[1],&ip1[2],&ip1[3],&port1[0],&port1[1]);
+              std::cout << "IPS ARE -->" << ip1[0] << '\n'<< ip1[1]<< '\n' << ip1[2]<< '\n' << ip1[3] << '\n'<< port1[0]<< port1[1] << "\n";
 //              std::cout << ip6 << "\n";
 
-              uint32_t ip = ip4 << 24 | ip3 << 16 | ip2 << 8 | ip1;
-              uint32_t port = ip6 << 8 | ip5;
-//              std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
+              unsigned int  ip = ip1[3]<<24 | ip1[2]<<16 | ip1[1]<<8| ip1[0];
+              unsigned int  port = port1[0]<<8 | port1[1];
+             std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
 
               data_socket = connect_TCP (ip, port);
               if(data_socket>=0){
@@ -282,9 +289,10 @@ void ClientConnection::WaitForRequests() {
             while(done==MAX_BUFF){
                 std::cout<<"entra"<<std::endl;
                 done=recv(data_socket,received,MAX_BUFF,0);
+                std::cout<<"sale"<<std::endl;
                 fwrite(received,sizeof(char),done,fichero);
             }
-            std::cout<<"sale"<<std::endl;
+            std::cout<<"Sale"<<std::endl;
            // fprintf(fd,"250 Requested file action okay, completed");
             fclose(fichero);
             close(data_socket);
