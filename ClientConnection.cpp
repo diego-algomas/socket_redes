@@ -85,7 +85,6 @@ int connect_TCP( uint32_t address,  uint16_t  port) {
     std::cout << "ADDRESS RECEIVED " << address << "PORT RECEIVED " << port << "\n";
 
     struct sockaddr_in sin;
-    struct hostent* hent;
 
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
@@ -187,15 +186,15 @@ void ClientConnection::WaitForRequests() {
                           200
                           500, 501, 421, 530*/
 
-              unsigned int ip1[4];
-              unsigned int port1[2];
+              int ip1[4];
+              int port1[2];
 
               fscanf(fd,"%d,%d,%d,%d,%d,%d", &ip1[0],&ip1[1],&ip1[2],&ip1[3],&port1[0],&port1[1]);
               std::cout << "IPS ARE -->" << ip1[0] << '\n'<< ip1[1]<< '\n' << ip1[2]<< '\n' << ip1[3] << '\n'<< port1[0]<< port1[1] << "\n";
 //              std::cout << ip6 << "\n";
 
-              unsigned int  ip = ip1[3]<<24 | ip1[2]<<16 | ip1[1]<<8| ip1[0];
-              unsigned int  port = port1[0]<<8 | port1[1];
+              uint32_t  ip = ip1[3]<<24 | ip1[2]<<16 | ip1[1]<<8| ip1[0];
+              uint16_t  port = port1[0]<<8 | port1[1];
              std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
 
               data_socket = connect_TCP (ip, port);
@@ -206,7 +205,7 @@ void ClientConnection::WaitForRequests() {
                 fprintf(fd, "421 fail\n.");
               }
           // Aquí tenemos que conectarnos, es decir connectar el data socket.
-
+        std::cout<<"entrado"<<std::endl;
           /* Este port no es el mismo que el del FTP aqui tiene que recibirse una info*/
     }
       else if (COMMAND("PASV")) {
@@ -277,13 +276,15 @@ void ClientConnection::WaitForRequests() {
 //             425, 426, 451, 551, 552
 //          532, 450, 452, 553
 //          500, 501, 421, 530
-          fscanf(fd,"%s",arg);
+            std::cout<<data_socket<<std::endl;
+            fscanf(fd,"%s",arg);
             FILE* fichero;
             fichero=fopen(arg,"wb");
             if(fichero==NULL)
                 fprintf(fd,"450 Requested file action not taken.\n File unavailable\n");
             else
                 fprintf(fd,"150 File status okay; about to open data connection.\n");
+            fflush(fd);
             char received[MAX_BUFF];
             int done=MAX_BUFF;
             while(done==MAX_BUFF){
