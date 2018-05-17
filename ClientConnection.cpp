@@ -141,19 +141,23 @@ void ClientConnection::WaitForRequests() {
 
       fscanf(fd, "%s", command);
       if (COMMAND("USER")) {
-	    fscanf(fd, "%s", arg);
-      if (strcmp(arg, "Adri") == 0  ){
-	    fprintf(fd, "331 User name ok, need password\n");
-      }else{
-      fprintf(fd, "530 Not logged in\n");
-      parar = true;
-        }
-      }
+            fscanf(fd, "%s", arg);
+          if (strcmp(arg, "Adri") == 0  ){
+            fprintf(fd, "331 User name ok, need password\n");
+          }else{
+          fprintf(fd, "530 Not logged in\n");
+          parar = true;
+            }
+          }
       else if (COMMAND("PWD")) {
         /*PWD
                   257
                   500, 501, 502, 421, 550*/
+            char pwd[MAX_BUFF];
+            getcwd(pwd,sizeof(pwd));
+            //fprintf(fd,"Working on: %s\n",pwd);
 
+            fprintf(fd,"257 %s working directory.\n",pwd);
 
       }
       else if (COMMAND("PASS")) {
@@ -162,13 +166,13 @@ void ClientConnection::WaitForRequests() {
                  530
                  500, 501, 503, 421
                  332*/
-      fscanf(fd, "%s", arg);
-      if (strcmp(arg, "1234") == 0  ){
-	    fprintf(fd, "230 User logged in\n");
-      }else{
-      fprintf(fd, "530 Not logged in\n");
-      parar = true;
-        }
+          fscanf(fd, "%s", arg);
+          if (strcmp(arg, "1234") == 0  ){
+            fprintf(fd, "230 User logged in\n");
+          }else{
+            fprintf(fd, "530 Not logged in\n");
+            parar = true;
+            }
       }
       else if (COMMAND("PORT")) {
 
@@ -180,23 +184,23 @@ void ClientConnection::WaitForRequests() {
               int ip1, ip2, ip3, ip4, ip5, ip6;
 
               fscanf(fd,"%i,%i,%i,%i,%i,%i", &ip1,&ip2,&ip3,&ip4,&ip5,&ip6);
-              std::cout << "IPS ARE -->" << ip1 << ip2 << ip3 << ip4 << ip5<< ip6 << "\n";
-              std::cout << ip6 << "\n";
+//              std::cout << "IPS ARE -->" << ip1 << ip2 << ip3 << ip4 << ip5<< ip6 << "\n";
+//              std::cout << ip6 << "\n";
 
               uint32_t ip = ip4 << 24 | ip3 << 16 | ip2 << 8 | ip1;
               uint32_t port = ip6 << 8 | ip5;
-              std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
+//              std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
 
               data_socket = connect_TCP (ip, port);
               if(data_socket>=0){
                 fprintf(fd, "200 Port ok\n");
-      }
-      else {
-        fprintf(fd, "421 fail\n.");
-      }
-      // Aquí tenemos que conectarnos, es decir connectar el data socket.
+              }
+              else {
+                fprintf(fd, "421 fail\n.");
+              }
+          // Aquí tenemos que conectarnos, es decir connectar el data socket.
 
-      /* Este port no es el mismo que el del FTP aqui tiene que recibirse una info*/
+          /* Este port no es el mismo que el del FTP aqui tiene que recibirse una info*/
     }
       else if (COMMAND("PASV")) {
 
@@ -211,7 +215,7 @@ void ClientConnection::WaitForRequests() {
            by ptr to the specified value */
            memset(&sin, 0, sizeof(sin));
            sin.sin_family = AF_INET;
-           sin.sin_addr.s_addr = inet_addr("127.0.0.1");
+           sin.sin_addr.s_addr = inet_addr("127.0.0.1");                    //Decidimos nosotros o no? seguramente no yo lo cambio despues
            sin.sin_port = 50000;
 
 
@@ -231,6 +235,7 @@ void ClientConnection::WaitForRequests() {
                                                                           (unsigned int)((sin.sin_addr.s_addr >> 24) & 0xff),
                                                                           (unsigned int)(sin.sin_port & 0xff),
                                                                           (unsigned int)(sin.sin_port >> 8));
+           fflush(fd);
 //            printf("227 Entering Passive Mode (%d,%d,%d,%d,%d,%d).\n",(unsigned int)(sin.sin_addr.s_addr & 0xff),(unsigned int)((sin.sin_addr.s_addr >> 8) & 0xff),
 //                   (unsigned int)((sin.sin_addr.s_addr >> 16) & 0xff),
 //                   (unsigned int)((sin.sin_addr.s_addr >> 24) & 0xff),
@@ -238,25 +243,42 @@ void ClientConnection::WaitForRequests() {
 //                   (unsigned int)(sin.sin_port >> 8));
 
 
-//           struct sockaddr_in fsin;
-//            socklen_t alen = sizeof(fsin);
-//            int ssock;
-//            std::cout<<"Salio"<<std::endl;
-//            ssock =accept(socketFd, (struct sockaddr *)&fsin, &alen);
-//            std::cout<<ssock<<std::endl;
-//           if(ssock<0)
-//                errexit("Fallo en el accept: %s\n", strerror(errno));
+            struct sockaddr_in fsin;
+            socklen_t alen = sizeof(fsin);
+            int ssock;
+            std::cout<<"Salio"<<std::endl;
+            ssock =accept(socketFd, (struct sockaddr *)&fsin, &alen);
+            std::cout<<ssock<<std::endl;
+           if(ssock<0)
+                errexit("Fallo en el accept: %s\n", strerror(errno));
 
 
 
             std::cout<<"llego"<<std::endl;
-           // data_socket=socketFd;
+           data_socket=socketFd;
 
       }
       else if (COMMAND("CWD")) {
-
-      }
+          fscanf(fd,"%s",arg);
+          fprintf(fd,"250 directory changed to %s\n",arg);
+      }                                                                                     //Todo asegurar que no hay que implementarlo
       else if (COMMAND("STOR") ) {
+
+//          125, 150
+//             (110)
+//             226, 250
+//             425, 426, 451, 551, 552
+//          532, 450, 452, 553
+//          500, 501, 421, 530
+          fscanf(fd,"%s",arg);
+            FILE* fichero;
+            fichero=fopen(arg,"wb");
+            if(fichero==NULL)
+                fprintf(fd,"450 Requested file action not taken.\n File unavailable\n");
+            else
+                fprintf(fd,"150 File status okay; about to open data connection.\n");
+
+
 
       }
       else if (COMMAND("SYST")) {
@@ -267,75 +289,76 @@ void ClientConnection::WaitForRequests() {
       }
       else if (COMMAND("RETR")) {
 
-      fscanf(fd, "%s", arg);
+              fscanf(fd, "%s", arg);
 
-      FILE* fichero;
-      fichero = fopen(arg,"rb");
+              FILE* fichero;
+              fichero = fopen(arg,"rb");
 
-      if (fichero == NULL){
-      //  std::cout << arg << "\n";
-        std::cout << "ERROR!!!!!!!!!!!\n";
-      }
-      fprintf(fd, "450 Requested file action not taken. File unavailable (e.g., file busy, non-existent)\n");
+              if (fichero == NULL){
 
-      /* Tenemos que utilizar fread para leer el fichero en un buffer y poder ir mandandolo por medio de send()
-      progresivamente*/
+                std::cout << "ERROR!!!!!!!!!!!\n";
+                fprintf(fd, "450 Requested file action not taken. File unavailable (e.g., file busy, non-existent)\n");
 
-      /* size_t fread ( void * ptr, size_t size, size_t count, FILE * stream );
-      --> Reads an array of count elements,  each one with a size of size bytes,
-      from the stream and stores them in the block of memory specified by ptr.*/
+              }
 
-      fprintf(fd, "150 File status okay; about to open data connection\n");
+              /* Tenemos que utilizar fread para leer el fichero en un buffer y poder ir mandandolo por medio de send()
+              progresivamente*/
 
-      // Obtenemos la longitud del fichero.
+              /* size_t fread ( void * ptr, size_t size, size_t count, FILE * stream );
+              --> Reads an array of count elements,  each one with a size of size bytes,
+              from the stream and stores them in the block of memory specified by ptr.*/
 
-      std::cout << "1\n";
-      fseek(fichero, 0, SEEK_END);
-      std::cout << "2\n";
-      long ficheroSize = ftell(fichero);
-      std::cout << "3\n";
-      rewind(fichero);
+              fprintf(fd, "150 File status okay; about to open data connection\n");
 
-      // Ahora reservamos memoria para ese buffer
-      std::cout << "2\n";
-      char* buffer;
-      buffer = (char*) malloc(sizeof(char)*ficheroSize);
-      if (buffer == NULL){
-        std::cout << "Memory error\n";
-      }
+              // Obtenemos la longitud del fichero.
 
-      std::cout << "3\n";
-      // Guardamos el fichero en el buffer
-      size_t result = fread(buffer, 1, ficheroSize, fichero);
-      if (result != ficheroSize)
-      std::cout << "Error de lectura\n";
+              std::cout << "1\n";
+              fseek(fichero, 0, SEEK_END);
+              std::cout << "2\n";
+              long ficheroSize = ftell(fichero);
+              std::cout << "3\n";
+              rewind(fichero);
+
+              // Ahora reservamos memoria para ese buffer
+              std::cout << "2\n";
+              char* buffer;
+              buffer = (char*) malloc(sizeof(char)*ficheroSize);
+              if (buffer == NULL){
+                std::cout << "Memory error\n";
+              }
+
+              std::cout << "3\n";
+              // Guardamos el fichero en el buffer
+              size_t result = fread(buffer, 1, ficheroSize, fichero);
+              if (result != ficheroSize)
+              std::cout << "Error de lectura\n";
 
 
-      //TODO send devuelve -1 asi que hay un error.
+              //TODO send devuelve -1 asi que hay un error.
 
-      // Enviamos el fichero
-      char* ptr = buffer;
-      while (result > 0){
-        // "On success, these calls return the number of characters sent." --> send()
-        // ¿Habrá un problema con el data socket?
-        int charactersSent = send(data_socket, ptr, result , 0);
-        std::cout << charactersSent << "\n";
-        break;
-        ptr += charactersSent;
-        result  -= charactersSent;
-        std::cout << charactersSent << "\n";
-      }
+              // Enviamos el fichero
+              char* ptr = buffer;
+              while (result > 0){
+                // "On success, these calls return the number of characters sent." --> send()
+                // ¿Habrá un problema con el data socket?
+                int charactersSent = send(data_socket, ptr, result , 0);
+                std::cout << charactersSent << "\n";
+                break;
+                ptr += charactersSent;
+                result  -= charactersSent;
+                std::cout << charactersSent << "\n";
+              }
 
-      fprintf(fd, "226 Closing data connection.\n");
+              fprintf(fd, "226 Closing data connection.\n");
 
-      /* Abrir el fichero con fopen y mandarlo con send() a la dirección IP que nos tienen que dar supongo.
-        ¿Y luego usar connect_tcp?*/
+              /* Abrir el fichero con fopen y mandarlo con send() a la dirección IP que nos tienen que dar supongo.
+                ¿Y luego usar connect_tcp?*/
       }
       else if (COMMAND("QUIT")) {
 
       }
       else if (COMMAND("LIST")) {
-
+        std::cout<<"ejecuta"<<std::endl;
       }
       else  {
 
