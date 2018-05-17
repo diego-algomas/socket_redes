@@ -261,7 +261,7 @@ void ClientConnection::WaitForRequests() {
       else if (COMMAND("CWD")) {
           fscanf(fd,"%s",arg);
           fprintf(fd,"250 directory changed to %s\n",arg);
-      }                                                                                     //Todo asegurar que no hay que implementarlo
+      }
       else if (COMMAND("STOR") ) {
 
 //          125, 150
@@ -277,8 +277,20 @@ void ClientConnection::WaitForRequests() {
                 fprintf(fd,"450 Requested file action not taken.\n File unavailable\n");
             else
                 fprintf(fd,"150 File status okay; about to open data connection.\n");
-
-
+            char received[MAX_BUFF];
+            int done=MAX_BUFF;
+            while(done==MAX_BUFF){
+                std::cout<<"entra"<<std::endl;
+                done=recv(data_socket,received,MAX_BUFF,0);
+                fwrite(received,sizeof(char),done,fichero);
+            }
+            std::cout<<"sale"<<std::endl;
+           // fprintf(fd,"250 Requested file action okay, completed");
+            fclose(fichero);
+            close(data_socket);
+            std::cout<<"no se queda colgado"<<std::endl;
+            fprintf(fd,"226 Closing data connection.\n");
+            fflush(fd);
 
       }
       else if (COMMAND("SYST")) {
@@ -355,7 +367,8 @@ void ClientConnection::WaitForRequests() {
                 ¿Y luego usar connect_tcp?*/
       }
       else if (COMMAND("QUIT")) {
-
+          fprintf(fd,"221 Service closing control connection.\n");
+          fclose(fd);
       }
       else if (COMMAND("LIST")) {
         std::cout<<"ejecuta"<<std::endl;
