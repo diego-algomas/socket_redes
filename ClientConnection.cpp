@@ -43,6 +43,7 @@ ClientConnection::ClientConnection(int s) {
     /* Se asigna el descriptor a una variable llamada sock*/
 
     char buffer[MAX_BUFF];
+    modoPasivo=false;
 
     /* Descriptor del socket de control*/
     control_socket = s;
@@ -204,15 +205,16 @@ void ClientConnection::WaitForRequests() {
               else {
                 fprintf(fd, "421 fail\n.");
               }
-          // Aquí tenemos que conectarnos, es decir connectar el data socket.
-        std::cout<<"entrado"<<std::endl;
+              fflush(fd);
+
+                std::cout<<"entrado"<<std::endl;
           /* Este port no es el mismo que el del FTP aqui tiene que recibirse una info*/
     }
       else if (COMMAND("PASV")) {
 
            modoPasivo = true;
 
-           struct sockaddr_in sin;
+           struct sockaddr_in sin,nuevo;
            int socketFd = socket(AF_INET, SOCK_STREAM, 0);
 
            if (socketFd < 0){
@@ -224,8 +226,9 @@ void ClientConnection::WaitForRequests() {
            memset(&sin, 0, sizeof(sin));
            sin.sin_family = AF_INET;
            sin.sin_addr.s_addr = inet_addr("127.0.0.1");                    //Decidimos nosotros o no? seguramente no yo lo cambio despues
-           sin.sin_port = 50000;
+           sin.sin_port = 0;
 
+           socklen_t sinsiz =sizeof(sin);
 
            if (bind(socketFd, (struct sockaddr*)&sin , sizeof(sin)) < 0 ){
              errexit("We couldn't bind with the port: %s\n", strerror(errno));
@@ -236,7 +239,8 @@ void ClientConnection::WaitForRequests() {
            if (listen(socketFd, 5) < 0 )
              errexit("Fail during listening: %s\n", strerror(errno) );
 
-
+           data_socket=socketFd;
+            getsockname(data_socket,(struct sockaddr*)&sin,&sinsiz);
            std::cout<<sin.sin_addr.s_addr<<std::endl;
            fprintf(fd, "227 Entering Passive Mode (%d,%d,%d,%d,%d,%d).\n",(unsigned int)(sin.sin_addr.s_addr & 0xff),(unsigned int)((sin.sin_addr.s_addr >> 8) & 0xff),
                                                                           (unsigned int)((sin.sin_addr.s_addr >> 16) & 0xff),
@@ -249,21 +253,6 @@ void ClientConnection::WaitForRequests() {
 //                   (unsigned int)((sin.sin_addr.s_addr >> 24) & 0xff),
 //                   (unsigned int)(sin.sin_port & 0xff),
 //                   (unsigned int)(sin.sin_port >> 8));
-
-
-            struct sockaddr_in fsin;
-            socklen_t alen = sizeof(fsin);
-            int ssock;
-            std::cout<<"Salio"<<std::endl;
-            ssock =accept(socketFd, (struct sockaddr *)&fsin, &alen);
-            std::cout<<ssock<<std::endl;
-           if(ssock<0)
-                errexit("Fallo en el accept: %s\n", strerror(errno));
-
-
-
-            std::cout<<"llego"<<std::endl;
-           data_socket=socketFd;
 
       }
       else if (COMMAND("CWD")) {
@@ -278,7 +267,7 @@ void ClientConnection::WaitForRequests() {
 //             425, 426, 451, 551, 552
 //          532, 450, 452, 553
 //          500, 501, 421, 530
-            std::cout<<data_socket<<std::endl;
+
             fscanf(fd,"%s",arg);
             FILE* fichero;
             fichero=fopen(arg,"wb");
@@ -287,6 +276,18 @@ void ClientConnection::WaitForRequests() {
             else
                 fprintf(fd,"150 File status okay; about to open data connection.\n");
             fflush(fd);
+            if (modoPasivo){
+
+              struct sockaddr_in fsin;
+              socklen_t fsin_len = sizeof(fsin);
+
+              data_socket = accept(data_socket, (struct sockaddr*)&fsin, &fsin_len);
+
+              if(data_socket<0)
+                   errexit("Fallo en el accept: %s\n", strerror(errno));
+              std::cout << "Conexion en modo pasivo aceptada\n";
+            }
+              std::cout<<data_socket<<std::endl;
             char received[MAX_BUFF];
             int done=MAX_BUFF;
             while(done==MAX_BUFF){
@@ -298,10 +299,11 @@ void ClientConnection::WaitForRequests() {
             std::cout<<"Sale"<<std::endl;
            // fprintf(fd,"250 Requested file action okay, completed");
             fclose(fichero);
-            close(data_socket);
+
             std::cout<<"no se queda colgado"<<std::endl;
             fprintf(fd,"226 Closing data connection.\n");
             fflush(fd);
+            close(data_socket);
 
       }
       else if (COMMAND("SYST")) {
@@ -333,6 +335,18 @@ void ClientConnection::WaitForRequests() {
 
               fprintf(fd, "150 File status okay; about to open data connection\n");
 
+              if (modoPasivo){
+
+                struct sockaddr_in fsin;
+                socklen_t fsin_len = sizeof(fsin);
+
+                data_socket = accept(data_socket, (struct sockaddr*)&fsin, &fsin_len);
+
+                if(data_socket<0)
+                     errexit("Fallo en el accept: %s\n", strerror(errno));
+                std::cout << "Conexion en modo pasivo aceptada\n";
+              }
+
               // Obtenemos la longitud del fichero.
 
               std::cout << "1\n";
@@ -356,13 +370,8 @@ void ClientConnection::WaitForRequests() {
               if (result != ficheroSize)
               std::cout << "Error de lectura\n";
 
-              struct sockaddr_in fsin;
-              socklen_t fsin_len = sizeof(fsin);
 
-              if (modoPasivo){
-                data_socket = accept(data_socket, (struct sockaddr*)&fsin, &fsin_len);
-                std::cout << "Conexion en modo pasivo aceptada\n";
-              }
+
 
               // Enviamos el fichero
               char* ptr = buffer;
@@ -376,10 +385,11 @@ void ClientConnection::WaitForRequests() {
                 ficheroSize  -= charactersSent;
 
               }
-
-              fprintf(fd, "226 Closing data connection.\n");
               fclose(fichero);
               close(data_socket);
+              fprintf(fd, "226 Closing data connection.\n");
+              fflush(fd);
+
 
               std::cout << "Im out\n";
 
@@ -388,15 +398,15 @@ void ClientConnection::WaitForRequests() {
       }
       else if (COMMAND("QUIT")) {
           fprintf(fd,"221 Service closing control connection.\n");
+          fflush(fd);
           stop();
       }
       else if (COMMAND("LIST")) {
         std::cout<<"ejecuta"<<std::endl;
 
                 fprintf(fd, "125 Data connection already open; transfer Starting\n");
+                fflush(fd);
 
-                struct sockaddr_in fsin;
-                socklen_t fsin_len = sizeof(fsin);
 
                 char buffer[MAX_BUFF];
                 std::string ls = "ls -l";
@@ -405,14 +415,23 @@ void ClientConnection::WaitForRequests() {
 
                 if (fichero == NULL){
                   fprintf(fd, "450 Requested file action not taken. File unavailable\n");
+                  fflush(fd);
                   close(data_socket);
                 }
 
                 else{
 
-                  if(modoPasivo)
-                    data_socket = accept(data_socket,(struct sockaddr*)&fsin, &fsin_len);
+                    if (modoPasivo){
 
+                      struct sockaddr_in fsin;
+                      socklen_t fsin_len = sizeof(fsin);
+
+                      data_socket = accept(data_socket, (struct sockaddr*)&fsin, &fsin_len);
+
+                      if(data_socket<0)
+                           errexit("Fallo en el accept: %s\n", strerror(errno));
+                      std::cout << "Conexion en modo pasivo aceptada\n";
+                    }
                 std::string contenido;
 
                 while (!feof(fichero)){
@@ -423,6 +442,7 @@ void ClientConnection::WaitForRequests() {
                   }
 
                   fprintf(fd, "250 Closing data connection. Requested file action successful.\n");
+                  fflush(fd);
                   pclose(fichero);
                   close(data_socket);
 
@@ -446,4 +466,4 @@ void ClientConnection::WaitForRequests() {
 
     return;
 
-};
+}
