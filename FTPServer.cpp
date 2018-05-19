@@ -110,7 +110,6 @@ void FTPServer::run() {
   // Run client connection es una función de este mismo .cpp
   // Espera a que termine el hilo?
 	pthread_create(&thread, NULL, run_client_connection, (void*)connection);
-
   /*void* run_client_connection(void *c) {
       ClientConnection *connection = (ClientConnection *)c;
       connection->WaitForRequests();

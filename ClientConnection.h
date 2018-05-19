@@ -34,6 +34,7 @@ private:
     int control_socket;      // Control socket descriptor;
 
     bool parar;
+    bool modoPasivo;
 };
 
 #endif
