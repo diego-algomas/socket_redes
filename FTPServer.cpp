@@ -82,40 +82,23 @@ void FTPServer::stop() {
 }
 
 
-// Starting of the server
 void FTPServer::run() {
 
     struct sockaddr_in fsin;
-
-
-
     int ssock;
     socklen_t alen = sizeof(fsin);
-
-    msock = define_socket_TCP(port);  // This function must be implemented by you.
+    msock = define_socket_TCP(port);
 
     while (1) {
-	pthread_t thread;
-  // Después de esto se está bloqueando el servidor.
-  // Lo que devuelve accept es el socket del cliente.
-        ssock = accept(msock, (struct sockaddr *)&fsin, &alen); // ¿Cómo se acepta una conexión sin conexion?
-        if(ssock < 0)
-            errexit("Fallo en el accept: %s\n", strerror(errno));
+	  pthread_t thread;
 
+        ssock = accept(msock, (struct sockaddr *)&fsin, &alen);
+        if(ssock < 0)
+            errexit("Accept Failure: %s\n", strerror(errno));
 	ClientConnection *connection = new ClientConnection(ssock);
 
-	// Here a thread is created in order to process multiple
-	// requests simultaneously
-
-  // Run client connection es una función de este mismo .cpp
-  // Espera a que termine el hilo?
 	pthread_create(&thread, NULL, run_client_connection, (void*)connection);
-  /*void* run_client_connection(void *c) {
-      ClientConnection *connection = (ClientConnection *)c;
-      connection->WaitForRequests();
 
-      return NULL;
-  }*/
 
     }
 

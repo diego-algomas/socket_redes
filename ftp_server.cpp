@@ -6,7 +6,7 @@
 FTPServer *server;
 
 extern "C" void sighandler(int signal, siginfo_t *info, void *ptr) {
-  std::cout << "Dispara sigaction" << std::endl;
+  std::cout << "Sigaction has been fired" << std::endl;
   server->stop();
   exit(-1);
 }
@@ -20,7 +20,6 @@ void exit_handler() {
 int main(int argc, char **argv) {
 
 
-   /* Sigaction struct para handlear interrupciones ? */
     struct sigaction action;
     action.sa_sigaction = sighandler;
     action.sa_flags = SA_SIGINFO;
