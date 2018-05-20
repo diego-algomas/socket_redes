@@ -214,7 +214,7 @@ void ClientConnection::WaitForRequests() {
 
            modoPasivo = true;
 
-           struct sockaddr_in sin,nuevo;
+           struct sockaddr_in sin;
            int socketFd = socket(AF_INET, SOCK_STREAM, 0);
 
            if (socketFd < 0){
