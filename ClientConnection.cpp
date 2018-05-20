@@ -66,7 +66,7 @@ ClientConnection::ClientConnection(int s) {
   }
 
 
-}//;
+}
 
 
 ClientConnection::~ClientConnection() {
@@ -75,12 +75,7 @@ ClientConnection::~ClientConnection() {
 
 }
 
-// Nos dan directamente la direccion no hace falta la consulta dns.
-// Pero quién nos la da y de qué manera, no es más facil poner un string???
-
 int connect_TCP( uint32_t address,  uint16_t  port) {
-
-    std::cout << "ADDRESS RECEIVED " << address << "PORT RECEIVED " << port << "\n";
 
     struct sockaddr_in sin;
 
@@ -97,12 +92,6 @@ int connect_TCP( uint32_t address,  uint16_t  port) {
     if (connect(socketFd, (struct sockaddr*)&sin, sizeof(sin)) < 0){
       errexit("We cannot connect %s\n");
     }
-    struct sockaddr_in sa;
-    socklen_t sa_len = sizeof(sa);
-
-    getsockname(socketFd,(struct sockaddr *)&sa, &sa_len);
-
-    std::cout<<"ip es "<<sa.sin_addr.s_addr<<"puerto"<<sa.sin_port<<std::endl;
 
     return socketFd;
 
@@ -128,10 +117,8 @@ void ClientConnection::stop() {
 // If you think that you have to add other commands feel free to do so. You
 // are allowed to add auxiliary methods if necessary.
 
-// Hay un socket de datos y un socket de control
-
 void ClientConnection::WaitForRequests() {
-    if (!ok) { // Si ha habido errores de inicialización
+    if (!ok) { // If there is any problem  on the inicialization
       std::cout << "Initialization error\n";
 	     return;
     }
@@ -151,13 +138,9 @@ void ClientConnection::WaitForRequests() {
             }
           }
       else if (COMMAND("PWD")) {
-        /*PWD
-                  257
-                  500, 501, 502, 421, 550*/
+
             char pwd[MAX_BUFF];
             getcwd(pwd,sizeof(pwd));
-            //fprintf(fd,"Working on: %s\n",pwd);
-
             fprintf(fd,"257 %s working directory.\n",pwd);
 
       }
@@ -177,11 +160,9 @@ void ClientConnection::WaitForRequests() {
               int port1[2];
 
               fscanf(fd,"%d,%d,%d,%d,%d,%d", &ip1[0],&ip1[1],&ip1[2],&ip1[3],&port1[0],&port1[1]);
-              std::cout << "IPS ARE -->" << ip1[0] << '\n'<< ip1[1]<< '\n' << ip1[2]<< '\n' << ip1[3] << '\n'<< port1[0]<< port1[1] << "\n";
 
               uint32_t  ip = ip1[3]<<24 | ip1[2]<<16 | ip1[1]<<8| ip1[0];
               uint16_t  port = port1[0]<<8 | port1[1];
-             std::cout << "IP -> " << ip << "PORT -> " << port << "\n";
 
               data_socket = connect_TCP (ip, port);
               if(data_socket>=0){
@@ -222,8 +203,7 @@ void ClientConnection::WaitForRequests() {
              errexit("Fail during listening: %s\n", strerror(errno) );
 
            data_socket=socketFd;
-            getsockname(data_socket,(struct sockaddr*)&sin,&sinsiz);
-           std::cout<<sin.sin_addr.s_addr<<std::endl;
+           getsockname(data_socket,(struct sockaddr*)&sin,&sinsiz);
            fprintf(fd, "227 Entering Passive Mode (%d,%d,%d,%d,%d,%d).\n",(unsigned int)(sin.sin_addr.s_addr & 0xff),(unsigned int)((sin.sin_addr.s_addr >> 8) & 0xff),
                                                                           (unsigned int)((sin.sin_addr.s_addr >> 16) & 0xff),
                                                                           (unsigned int)((sin.sin_addr.s_addr >> 24) & 0xff),
@@ -255,19 +235,14 @@ void ClientConnection::WaitForRequests() {
 
               if(data_socket<0)
                    errexit("Fallo en el accept: %s\n", strerror(errno));
-              std::cout << "Conexion en modo pasivo aceptada\n";
             }
-              std::cout<<data_socket<<std::endl;
+
             char received[MAX_BUFF];
             int done=MAX_BUFF;
             while(done==MAX_BUFF){
-                std::cout<<"entra"<<std::endl;
                 done=recv(data_socket,received,MAX_BUFF,0);
-                std::cout<<"sale"<<std::endl;
                 fwrite(received,sizeof(char),done,fichero);
             }
-            std::cout<<"Sale"<<std::endl;
-           // fprintf(fd,"250 Requested file action okay, completed");
             fclose(fichero);
 
             fprintf(fd,"226 Closing data connection.\n");
@@ -310,7 +285,6 @@ void ClientConnection::WaitForRequests() {
 
                 if(data_socket<0)
                      errexit("Fallo en el accept: %s\n", strerror(errno));
-                std::cout << "Passive mode connection accepted\n";
               }
 
               // We obtain the file lenght

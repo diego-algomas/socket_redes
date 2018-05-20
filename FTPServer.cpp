@@ -90,16 +90,12 @@ void FTPServer::run() {
     msock = define_socket_TCP(port);
 
     while (1) {
-	  pthread_t thread;
-
+        pthread_t thread;
         ssock = accept(msock, (struct sockaddr *)&fsin, &alen);
         if(ssock < 0)
             errexit("Accept Failure: %s\n", strerror(errno));
-	ClientConnection *connection = new ClientConnection(ssock);
-
-	pthread_create(&thread, NULL, run_client_connection, (void*)connection);
-
-
+        ClientConnection *connection = new ClientConnection(ssock);
+        pthread_create(&thread, NULL, run_client_connection, (void*)connection);
     }
 
 }
