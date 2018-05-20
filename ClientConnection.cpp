@@ -132,7 +132,7 @@ void ClientConnection::stop() {
 
 void ClientConnection::WaitForRequests() {
     if (!ok) { // Si ha habido errores de inicialización
-      std::cout << "Error de inicialización\n";
+      std::cout << "Initialization error\n";
 	     return;
     }
 
@@ -162,11 +162,7 @@ void ClientConnection::WaitForRequests() {
 
       }
       else if (COMMAND("PASS")) {
-        /*230
-                 202
-                 530
-                 500, 501, 503, 421
-                 332*/
+
           fscanf(fd, "%s", arg);
           if (strcmp(arg, "1234") == 0  ){
             fprintf(fd, "230 User logged in\n");
@@ -314,7 +310,7 @@ void ClientConnection::WaitForRequests() {
 
                 if(data_socket<0)
                      errexit("Fallo en el accept: %s\n", strerror(errno));
-                std::cout << "Conexion en modo pasivo aceptada\n";
+                std::cout << "Passive mode connection accepted\n";
               }
 
               // We obtain the file lenght
